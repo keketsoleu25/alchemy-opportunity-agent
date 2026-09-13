@@ -8,35 +8,58 @@ The project focuses on a practical problem: job seekers do not only need more jo
 
 ## Current milestone
 
-Milestone 1 ships a deterministic opportunity-matching workflow and an Alexa+-style conversational web experience. It demonstrates the product flow before the AWS-powered reasoning layer is connected.
+Milestone 2 wires **Amazon Bedrock Runtime** into the opportunity-analysis API while preserving deterministic scoring as a guardrail.
 
 Current workflow:
 
-`Profile -> Discover -> Check eligibility -> Match -> Decide -> Act`
+`Profile -> Discover -> Check eligibility -> Match -> Decide -> Bedrock explanation -> Act`
 
-## Why this is not just a chatbot
+The deterministic engine owns the score and APPLY / STRETCH / SKIP decision. Bedrock adds concise user-facing reasoning without being allowed to overwrite those core rules.
 
-The application separates candidate context, eligibility checks, matching, decision logic, and next-action guidance. The current implementation intentionally keeps the eligibility and scoring layer deterministic so later AI reasoning can add explanation and orchestration without replacing core business rules.
+If Bedrock is disabled or invocation fails, the API falls back to the deterministic explanation so the application remains usable.
 
-## Planned hackathon architecture
+## Architecture
 
 - Next.js + React + TypeScript
 - Alexa+-style simulated agent experience
-- Amazon Bedrock reasoning layer
-- AWS agent/orchestration service(s) selected during implementation
-- Public open-source repository
-- Friction log documenting real onboarding and integration issues
-
-> AWS integrations will only be marked complete here once they are implemented and demonstrated in code.
+- deterministic eligibility and matching engine
+- Amazon Bedrock Runtime via the AWS SDK for JavaScript v3
+- Bedrock Converse API for model reasoning
+- safe deterministic fallback
+- public open-source repository
+- friction log documenting real onboarding and integration issues
 
 ## Run locally
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
+On Windows PowerShell you can use:
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
 Open `http://localhost:3000`.
+
+By default, `BEDROCK_ENABLED=false`, so the app runs safely without AWS credentials.
+
+## Enable Amazon Bedrock
+
+Configure AWS credentials using the AWS SDK credential chain, then edit `.env.local`:
+
+```env
+BEDROCK_ENABLED=true
+AWS_REGION=us-east-1
+BEDROCK_MODEL_ID=global.anthropic.claude-haiku-4-5-20251001-v1:0
+```
+
+Do not commit AWS credentials to GitHub.
+
+The model ID is configurable because model availability and access can differ by AWS account and region.
 
 ## Build
 
@@ -49,17 +72,17 @@ npm start
 
 ```text
 app/                  Next.js UI and API routes
-lib/                  candidate/job types and deterministic match engine
+lib/                  matching engine and Bedrock reasoning integration
 docs/                 architecture notes and hackathon friction log
 ```
 
 ## Open-source mini challenge
 
-This repository is being created as a new open-source project during the hackathon window. See [LICENSE](./LICENSE).
+This repository is a new open-source project created during the hackathon window. See [LICENSE](./LICENSE).
 
 ## AWS Builder mini challenge
 
-AWS integration is the next milestone. The README will document exact services, setup steps, runtime usage, and architecture once integrated.
+Amazon Bedrock Runtime is now integrated in code. The next milestone is to verify a live Bedrock invocation with the hackathon AWS account, document the real onboarding experience, and extend the agent workflow beyond a single reasoning step.
 
 ## License
 
