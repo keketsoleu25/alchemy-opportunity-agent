@@ -1,0 +1,57 @@
+import { CandidateProfile, Opportunity } from "./types";
+
+export const demoProfile: CandidateProfile = {
+  name: "Demo Candidate",
+  location: "Johannesburg, South Africa",
+  yearsExperience: 1,
+  skills: [
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Node.js",
+    "PostgreSQL",
+    "REST APIs",
+    "Docker",
+    "Git",
+  ],
+  qualifications: ["Software development training", "Matric"],
+  preferredRoles: ["Junior Software Developer", "Frontend Developer", "Full-Stack Developer"],
+  remotePreferred: true,
+};
+
+export const demoOpportunities: Opportunity[] = [
+  {
+    id: "junior-fullstack",
+    title: "Junior Full-Stack Developer",
+    company: "Ubuntu Digital",
+    location: "Johannesburg, South Africa",
+    workMode: "Hybrid",
+    minYearsExperience: 1,
+    requiredSkills: ["TypeScript", "React", "Node.js", "REST APIs"],
+    preferredSkills: ["Next.js", "PostgreSQL", "Docker"],
+    summary: "Build customer-facing web applications and internal APIs in a small product team.",
+  },
+  {
+    id: "frontend",
+    title: "Frontend Developer",
+    company: "Mzanzi Commerce",
+    location: "Cape Town, South Africa",
+    workMode: "Remote",
+    minYearsExperience: 2,
+    requiredSkills: ["TypeScript", "React", "CSS"],
+    preferredSkills: ["Next.js", "Testing"],
+    summary: "Own responsive interfaces for a growing commerce platform.",
+  },
+  {
+    id: "senior-platform",
+    title: "Senior Platform Engineer",
+    company: "Highveld Systems",
+    location: "Pretoria, South Africa",
+    workMode: "On-site",
+    minYearsExperience: 6,
+    requiredSkills: ["Kubernetes", "AWS", "Terraform", "Go"],
+    preferredSkills: ["System Design", "Observability"],
+    qualificationRequired: "Bachelor's degree or equivalent experience",
+    summary: "Lead cloud platform reliability and infrastructure automation across engineering teams.",
+  },
+];
