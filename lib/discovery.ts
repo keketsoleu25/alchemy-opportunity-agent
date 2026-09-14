@@ -26,11 +26,10 @@ const softwareIntentTerms = [
   "platform",
 ];
 
-const softwareRoleTerms = [
-  "software",
+const coreSoftwareTitleTerms = [
+  "software engineer",
+  "software developer",
   "developer",
-  "engineer",
-  "engineering",
   "frontend",
   "front-end",
   "backend",
@@ -43,7 +42,7 @@ const softwareRoleTerms = [
   "android",
   "ios",
   "devops",
-  "platform",
+  "platform engineer",
   "cloud engineer",
   "qa engineer",
   "quality engineer",
@@ -51,6 +50,21 @@ const softwareRoleTerms = [
   "data engineer",
   "graduate developer",
   "graduate engineer",
+];
+
+const adjacentTechnicalTitleTerms = [
+  "technical services",
+  "technical support",
+  "support engineer",
+  "solutions engineer",
+  "solution engineer",
+  "solutions architect",
+  "sales engineer",
+  "customer engineer",
+  "implementation engineer",
+  "integration engineer",
+  "professional services",
+  "technical consultant",
 ];
 
 const seniorTitleTerms = [
@@ -122,17 +136,44 @@ function hasJuniorIntent(query: string) {
   );
 }
 
-function isSoftwareOpportunity(opportunity: Opportunity) {
+type RoleFamily = "core-software" | "adjacent-technical" | "other";
+
+function classifyRoleFamily(opportunity: Opportunity): RoleFamily {
   const title = opportunity.title.toLowerCase();
   const summary = opportunity.summary.toLowerCase();
 
-  if (softwareRoleTerms.some((term) => title.includes(term))) return true;
-
-  if (/(early careers?|graduate|intern(ship)?)/i.test(opportunity.title)) {
-    return softwareRoleTerms.some((term) => summary.includes(term));
+  if (adjacentTechnicalTitleTerms.some((term) => title.includes(term))) {
+    return "adjacent-technical";
   }
 
-  return false;
+  if (coreSoftwareTitleTerms.some((term) => title.includes(term))) {
+    return "core-software";
+  }
+
+  // Generic engineer titles are only treated as core when their description
+  // clearly points to software development rather than services/support work.
+  if (title.includes("engineer")) {
+    const softwareSignals = [
+      "software development",
+      "application development",
+      "web application",
+      "frontend",
+      "backend",
+      "full stack",
+      "full-stack",
+      "codebase",
+      "coding",
+      "programming",
+    ];
+    if (softwareSignals.some((term) => summary.includes(term))) return "core-software";
+  }
+
+  if (/(early careers?|graduate|intern(ship)?)/i.test(opportunity.title)) {
+    const softwareSignals = ["software", "developer", "engineering", "programming", "coding"];
+    if (softwareSignals.some((term) => summary.includes(term))) return "core-software";
+  }
+
+  return "other";
 }
 
 function isCompatibleWithJuniorIntent(opportunity: Opportunity) {
@@ -141,8 +182,6 @@ function isCompatibleWithJuniorIntent(opportunity: Opportunity) {
   if (seniorTitleTerms.some((term) => title.includes(term))) return false;
   if (midLevelTitleTerms.some((term) => title.includes(term))) return false;
 
-  // Neutral software titles can still be genuinely entry-level, but a role that
-  // explicitly asks for 4+ years is not a realistic junior target.
   return opportunity.minYearsExperience <= 3;
 }
 
@@ -195,18 +234,37 @@ export async function discoverOpportunities(query: string): Promise<DiscoveryRes
   const softwareIntent = hasSoftwareIntent(query);
   const juniorIntent = hasJuniorIntent(query);
 
-  const softwareRelevant = softwareIntent ? unique.filter(isSoftwareOpportunity) : unique;
+  let roleRelevant = unique;
+  let coreCount = 0;
+  let adjacentCount = 0;
+
+  if (softwareIntent) {
+    const core = unique.filter((opportunity) => classifyRoleFamily(opportunity) === "core-software");
+    const adjacent = unique.filter((opportunity) => classifyRoleFamily(opportunity) === "adjacent-technical");
+    coreCount = core.length;
+    adjacentCount = adjacent.length;
+
+    // Keep the main feed development-focused. Adjacent technical roles are only
+    // used as fallback inventory when the core software pool is too small.
+    roleRelevant = core.length >= 8 ? core : [...core, ...adjacent];
+  }
+
   const seniorityRelevant = juniorIntent
-    ? softwareRelevant.filter(isCompatibleWithJuniorIntent)
-    : softwareRelevant;
+    ? roleRelevant.filter(isCompatibleWithJuniorIntent)
+    : roleRelevant;
 
   const ranked = rankByQuery(seniorityRelevant, query, juniorIntent).slice(0, 40);
 
   const notes: string[] = [];
   if (softwareIntent) {
     notes.push(
-      `Filtered ${unique.length} imported vacancies down to ${softwareRelevant.length} software-relevant roles before scoring.`,
+      `Classified ${unique.length} imported vacancies into ${coreCount} core software roles and ${adjacentCount} adjacent technical roles.`,
     );
+    if (coreCount >= 8) {
+      notes.push("Main results are restricted to core software-development roles; adjacent technical roles are held back.");
+    } else {
+      notes.push("Adjacent technical roles were retained only because the core software pool was small.");
+    }
   }
   if (juniorIntent) {
     notes.push(
