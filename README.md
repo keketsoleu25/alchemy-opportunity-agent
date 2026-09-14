@@ -8,23 +8,25 @@ The project focuses on a practical problem: job seekers do not only need more jo
 
 ## Current milestone
 
-Milestone 3 adds editable candidate context to the working decision flow.
+Milestone 4 adds live opportunity ingestion while preserving the guarded scoring and reasoning architecture.
 
 Current workflow:
 
-`Candidate profile -> Discover -> Check eligibility -> Match -> Decide -> Optional Bedrock explanation -> Act`
+`Candidate profile -> Discover live vacancies -> Normalize -> Check eligibility -> Match -> Decide -> Optional Bedrock explanation -> Act`
 
-A user can now change their name, location, years of experience, skills, remote preference, and request before running the analysis. The API validates that profile and feeds it into the same deterministic scoring engine used in earlier milestones.
+The user can edit their profile and request. The API can now ingest public Greenhouse job-board vacancies, normalize them into the project Opportunity schema, rank them against the request, and then pass them through the same deterministic scoring engine used in earlier milestones.
 
 The deterministic engine owns the score and APPLY / STRETCH / SKIP decision. Amazon Bedrock Runtime is integrated as an optional reasoning layer and is not allowed to overwrite those core rules.
 
-If Bedrock is disabled or invocation fails, the API falls back to deterministic explanations so the application remains usable.
+If no live source is configured, live sources fail, or Bedrock is unavailable, the application falls back safely so the core demo remains usable.
 
 ## Architecture
 
 - Next.js + React + TypeScript
 - Alexa+-style simulated agent experience
 - editable candidate profile input
+- Greenhouse public job-board ingestion adapter
+- opportunity normalization and source metadata
 - deterministic eligibility and matching engine
 - Amazon Bedrock Runtime via the AWS SDK for JavaScript v3
 - Bedrock Converse API for model reasoning
@@ -40,7 +42,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-On Windows PowerShell you can use:
+On Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env.local
@@ -48,7 +50,17 @@ Copy-Item .env.example .env.local
 
 Open `http://localhost:3000`.
 
-By default, `BEDROCK_ENABLED=false`, so the app runs safely without AWS runtime access.
+## Enable live opportunity discovery
+
+Add one or more public Greenhouse board tokens to `.env.local`:
+
+```env
+GREENHOUSE_BOARD_TOKENS=takealotgroup,impact,bashdotcom,offerzen
+```
+
+The application fetches the configured boards, normalizes vacancy data, extracts recognizable technology signals, estimates experience requirements, preserves the original vacancy URL, and feeds the resulting opportunities into the matching engine.
+
+If no board tokens are configured or all configured boards fail, the application uses the demo opportunities and clearly reports that fallback mode in the UI.
 
 ## Enable Amazon Bedrock
 
@@ -81,7 +93,8 @@ npm start
 
 ```text
 app/                  Next.js UI and API routes
-lib/                  matching engine and Bedrock reasoning integration
+lib/                  matching, discovery, normalization, and Bedrock integration
+lib/sources/          external opportunity-source adapters
 docs/                 architecture notes and hackathon friction log
 ```
 
