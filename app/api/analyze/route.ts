@@ -56,6 +56,13 @@ function decisionPriority(result: MatchResult) {
   return 1;
 }
 
+function preferredRolePriority(result: MatchResult) {
+  if (result.strengths.includes("Role family directly matches one of your stated target roles")) return 3;
+  if (result.strengths.includes("Role is within your broader software-development target family")) return 2;
+  if (result.gaps.includes("Role family is adjacent to, but outside, your stated target roles")) return 0;
+  return 1;
+}
+
 export async function POST(request: NextRequest) {
   let body: AnalyzeRequest = {};
 
@@ -78,6 +85,9 @@ export async function POST(request: NextRequest) {
       const decisionDelta = decisionPriority(b.result) - decisionPriority(a.result);
       if (decisionDelta !== 0) return decisionDelta;
 
+      const targetRoleDelta = preferredRolePriority(b.result) - preferredRolePriority(a.result);
+      if (targetRoleDelta !== 0) return targetRoleDelta;
+
       const relevanceDelta = a.discoveryIndex - b.discoveryIndex;
       if (relevanceDelta !== 0) return relevanceDelta;
 
@@ -87,6 +97,8 @@ export async function POST(request: NextRequest) {
     .map(({ result }) => result);
 
   const bedrockEnabled = process.env.BEDROCK_ENABLED === "true";
+  const rankingNote =
+    "Final ordering prioritises decision quality, then the candidate's stated target role families, then discovery relevance.";
 
   if (!bedrockEnabled) {
     return NextResponse.json({
@@ -95,7 +107,7 @@ export async function POST(request: NextRequest) {
       results: scored,
       mode: "deterministic-fallback",
       sourceMode: discovery.sourceMode,
-      note: `${discovery.note} Candidate qualifications, role preferences, work-mode tolerance, relocation preference, and work authorization now feed the guarded scoring engine. Bedrock is disabled, so deterministic scoring and explanations are active.`,
+      note: `${discovery.note} ${rankingNote} Candidate qualifications, work-mode tolerance, relocation preference, and work authorization remain part of the guarded scoring engine. Bedrock is disabled, so deterministic scoring and explanations are active.`,
     });
   }
 
@@ -111,7 +123,7 @@ export async function POST(request: NextRequest) {
       sourceMode: discovery.sourceMode,
       model: config.modelId,
       region: config.region,
-      note: `${discovery.note} Candidate qualifications, role preferences, work-mode tolerance, relocation preference, and work authorization feed deterministic scoring; Amazon Bedrock generates the user-facing reasoning.`,
+      note: `${discovery.note} ${rankingNote} Deterministic eligibility and scoring are preserved; Amazon Bedrock generates the user-facing reasoning.`,
     });
   } catch (error) {
     console.error("Bedrock reasoning failed; using deterministic fallback.", error);
@@ -122,7 +134,7 @@ export async function POST(request: NextRequest) {
       results: scored,
       mode: "deterministic-fallback",
       sourceMode: discovery.sourceMode,
-      note: `${discovery.note} Candidate constraints remain enforced. Bedrock invocation failed, so the agent safely returned deterministic results.`,
+      note: `${discovery.note} ${rankingNote} Candidate constraints remain enforced. Bedrock invocation failed, so the agent safely returned deterministic results.`,
     });
   }
 }
