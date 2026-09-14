@@ -17,6 +17,10 @@ export const demoProfile: CandidateProfile = {
   qualifications: ["Software development training", "Matric"],
   preferredRoles: ["Junior Software Developer", "Frontend Developer", "Full-Stack Developer"],
   remotePreferred: true,
+  hybridAccepted: true,
+  onSiteAccepted: true,
+  willingToRelocate: false,
+  workAuthorizedCountries: ["South Africa"],
 };
 
 export const demoOpportunities: Opportunity[] = [
