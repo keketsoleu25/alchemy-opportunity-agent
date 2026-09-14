@@ -21,6 +21,9 @@ export type Opportunity = {
   preferredSkills: string[];
   qualificationRequired?: string;
   summary: string;
+  source?: string;
+  sourceUrl?: string;
+  postedAt?: string;
 };
 
 export type MatchResult = {
