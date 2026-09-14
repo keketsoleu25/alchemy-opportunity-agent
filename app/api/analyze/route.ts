@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { demoOpportunities, demoProfile } from "@/lib/data";
+import { demoProfile } from "@/lib/data";
+import { discoverOpportunities } from "@/lib/discovery";
 import { analyseOpportunity } from "@/lib/scoring";
 import { enrichWithBedrock, getBedrockConfig } from "@/lib/bedrock";
 import type { CandidateProfile } from "@/lib/types";
@@ -52,10 +53,12 @@ export async function POST(request: NextRequest) {
 
   const profile = buildProfile(body.profile);
   const query = typeof body.query === "string" ? body.query.trim() : "";
+  const discovery = await discoverOpportunities(query);
 
-  const scored = demoOpportunities
+  const scored = discovery.opportunities
     .map((opportunity) => analyseOpportunity(profile, opportunity))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
 
   const bedrockEnabled = process.env.BEDROCK_ENABLED === "true";
 
@@ -65,7 +68,8 @@ export async function POST(request: NextRequest) {
       query,
       results: scored,
       mode: "deterministic-fallback",
-      note: "Bedrock is wired in but disabled. Deterministic scoring remains fully available.",
+      sourceMode: discovery.sourceMode,
+      note: `${discovery.note} Bedrock is disabled, so deterministic scoring and explanations are active.`,
     });
   }
 
@@ -78,9 +82,10 @@ export async function POST(request: NextRequest) {
       query,
       results,
       mode: "aws-bedrock",
+      sourceMode: discovery.sourceMode,
       model: config.modelId,
       region: config.region,
-      note: "Deterministic scoring is preserved; Amazon Bedrock generates the user-facing reasoning.",
+      note: `${discovery.note} Deterministic scoring is preserved; Amazon Bedrock generates the user-facing reasoning.`,
     });
   } catch (error) {
     console.error("Bedrock reasoning failed; using deterministic fallback.", error);
@@ -90,7 +95,8 @@ export async function POST(request: NextRequest) {
       query,
       results: scored,
       mode: "deterministic-fallback",
-      note: "Bedrock invocation failed, so the agent safely returned deterministic results.",
+      sourceMode: discovery.sourceMode,
+      note: `${discovery.note} Bedrock invocation failed, so the agent safely returned deterministic results.`,
     });
   }
 }
