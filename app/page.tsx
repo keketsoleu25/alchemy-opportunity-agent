@@ -1,35 +1,70 @@
 "use client";
 
 import { useState } from "react";
-import type { MatchResult } from "@/lib/types";
+import type { CandidateProfile, MatchResult } from "@/lib/types";
 
 type ApiResponse = {
+  profile: CandidateProfile;
   results: MatchResult[];
   mode: string;
   note?: string;
+  model?: string;
+};
+
+const initialProfile: CandidateProfile = {
+  name: "Demo Candidate",
+  location: "Johannesburg, South Africa",
+  yearsExperience: 1,
+  skills: ["TypeScript", "React", "Next.js", "Node.js", "PostgreSQL", "REST APIs", "Docker", "Git"],
+  qualifications: ["Software development training", "Matric"],
+  preferredRoles: ["Junior Software Developer", "Frontend Developer", "Full-Stack Developer"],
+  remotePreferred: true,
 };
 
 export default function Home() {
   const [results, setResults] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("ready");
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState("Ready to analyse your profile.");
   const [message, setMessage] = useState(
     "Find realistic junior software opportunities that match my profile.",
   );
+  const [profile, setProfile] = useState(initialProfile);
+  const [skillsText, setSkillsText] = useState(initialProfile.skills.join(", "));
+
+  function updateProfile<K extends keyof CandidateProfile>(key: K, value: CandidateProfile[K]) {
+    setProfile((current) => ({ ...current, [key]: value }));
+  }
 
   async function runAgent() {
     setLoading(true);
+    setNote("Analysing candidate fit…");
+
     try {
+      const candidate = {
+        ...profile,
+        skills: skillsText
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean),
+      };
+
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ profile: candidate, query: message }),
       });
+
+      if (!response.ok) throw new Error(`Analysis failed with status ${response.status}`);
+
       const data: ApiResponse = await response.json();
       setResults(data.results);
       setMode(data.mode);
-      setNote(data.note ?? "");
+      setNote(data.note ?? "Analysis complete.");
+    } catch (error) {
+      console.error(error);
+      setMode("error");
+      setNote("Analysis request failed. Check the local server and try again.");
     } finally {
       setLoading(false);
     }
@@ -40,7 +75,9 @@ export default function Home() {
       ? "AWS Bedrock reasoning active"
       : mode === "deterministic-fallback"
         ? "Deterministic fallback active"
-        : "Agent demo online";
+        : mode === "error"
+          ? "Agent needs attention"
+          : "Agent demo online";
 
   return (
     <main className="shell">
@@ -66,22 +103,71 @@ export default function Home() {
 
       <section className="workspace">
         <div className="conversation panel">
-          <div className="panelTitle">Conversation</div>
+          <div className="panelTitle">Candidate + request</div>
+
           <div className="agentMessage">
             <div className="avatar">A+</div>
             <div>
               <b>Opportunity Agent</b>
-              <p>What kind of opportunity should I analyse for you?</p>
+              <p>Give me the essentials and I&apos;ll rank each role by realistic fit.</p>
             </div>
           </div>
+
+          <div className="profileGrid">
+            <div>
+              <label htmlFor="name">Name</label>
+              <input
+                id="name"
+                value={profile.name}
+                onChange={(event) => updateProfile("name", event.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="experience">Years experience</label>
+              <input
+                id="experience"
+                type="number"
+                min="0"
+                max="50"
+                step="0.5"
+                value={profile.yearsExperience}
+                onChange={(event) => updateProfile("yearsExperience", Number(event.target.value))}
+              />
+            </div>
+          </div>
+
+          <label htmlFor="location">Location</label>
+          <input
+            id="location"
+            value={profile.location}
+            onChange={(event) => updateProfile("location", event.target.value)}
+          />
+
+          <label htmlFor="skills">Skills (comma separated)</label>
+          <textarea
+            id="skills"
+            className="compactTextarea"
+            value={skillsText}
+            onChange={(event) => setSkillsText(event.target.value)}
+          />
+
+          <label className="toggleRow" htmlFor="remotePreferred">
+            <input
+              id="remotePreferred"
+              type="checkbox"
+              checked={profile.remotePreferred}
+              onChange={(event) => updateProfile("remotePreferred", event.target.checked)}
+            />
+            <span>Prefer remote opportunities</span>
+          </label>
+
           <label htmlFor="prompt">Your request</label>
-          <textarea id="prompt" value={message} onChange={(e) => setMessage(e.target.value)} />
+          <textarea id="prompt" value={message} onChange={(event) => setMessage(event.target.value)} />
+
           <button onClick={runAgent} disabled={loading}>
             {loading ? "Analysing opportunities…" : "Run opportunity analysis"}
           </button>
-          <small>
-            Milestone 2: deterministic scoring with an optional Amazon Bedrock reasoning layer.
-          </small>
+          <small>Milestone 3: editable candidate context feeding the same guarded decision engine.</small>
           {note ? <small>{note}</small> : null}
         </div>
 
