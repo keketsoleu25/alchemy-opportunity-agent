@@ -7,6 +7,7 @@ type ApiResponse = {
   profile: CandidateProfile;
   results: MatchResult[];
   mode: string;
+  sourceMode?: string;
   note?: string;
   model?: string;
 };
@@ -25,6 +26,7 @@ export default function Home() {
   const [results, setResults] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("ready");
+  const [sourceMode, setSourceMode] = useState("demo-fallback");
   const [note, setNote] = useState("Ready to analyse your profile.");
   const [message, setMessage] = useState(
     "Find realistic junior software opportunities that match my profile.",
@@ -38,7 +40,7 @@ export default function Home() {
 
   async function runAgent() {
     setLoading(true);
-    setNote("Analysing candidate fit…");
+    setNote("Discovering and analysing opportunities…");
 
     try {
       const candidate = {
@@ -60,6 +62,7 @@ export default function Home() {
       const data: ApiResponse = await response.json();
       setResults(data.results);
       setMode(data.mode);
+      setSourceMode(data.sourceMode ?? "demo-fallback");
       setNote(data.note ?? "Analysis complete.");
     } catch (error) {
       console.error(error);
@@ -96,8 +99,8 @@ export default function Home() {
         <div className="eyebrow">ALEXA+ STYLE AGENTIC EXPERIENCE</div>
         <h1>Find the right opportunity.<br />Know your fit. <em>Take the next step.</em></h1>
         <p>
-          An opportunity intelligence agent for job seekers. It evaluates fit, explains gaps,
-          and turns job discovery into a clear action decision.
+          An opportunity intelligence agent for job seekers. It discovers roles, evaluates fit,
+          explains gaps, and turns job discovery into a clear action decision.
         </p>
       </section>
 
@@ -165,9 +168,10 @@ export default function Home() {
           <textarea id="prompt" value={message} onChange={(event) => setMessage(event.target.value)} />
 
           <button onClick={runAgent} disabled={loading}>
-            {loading ? "Analysing opportunities…" : "Run opportunity analysis"}
+            {loading ? "Discovering opportunities…" : "Run opportunity analysis"}
           </button>
-          <small>Milestone 3: editable candidate context feeding the same guarded decision engine.</small>
+          <small>Milestone 4: live-source ingestion feeds the same guarded decision engine.</small>
+          <small>Source mode: {sourceMode === "live-greenhouse" ? "Live Greenhouse boards" : "Demo fallback"}</small>
           {note ? <small>{note}</small> : null}
         </div>
 
@@ -177,7 +181,7 @@ export default function Home() {
             <div className="empty">
               <div className="orbit">◎</div>
               <h2>Ready to reason</h2>
-              <p>Run the agent to rank opportunities by realistic fit.</p>
+              <p>Run the agent to discover and rank opportunities by realistic fit.</p>
             </div>
           ) : (
             <div className="cards">
@@ -186,7 +190,10 @@ export default function Home() {
                   <div className="jobTop">
                     <div>
                       <h3>{result.opportunity.title}</h3>
-                      <p>{result.opportunity.company} · {result.opportunity.workMode}</p>
+                      <p>
+                        {result.opportunity.company} · {result.opportunity.workMode}
+                        {result.opportunity.source ? ` · ${result.opportunity.source}` : ""}
+                      </p>
                     </div>
                     <div className={`decision ${result.decision.toLowerCase()}`}>{result.decision}</div>
                   </div>
@@ -205,7 +212,15 @@ export default function Home() {
                       {(result.gaps.length ? result.gaps : ["No material gaps found"]).slice(0, 3).map((item) => <span className="gap" key={item}>• {item}</span>)}
                     </div>
                   </div>
-                  <div className="next"><b>Next action:</b> {result.nextAction}</div>
+                  <div className="next">
+                    <b>Next action:</b> {result.nextAction}
+                    {result.opportunity.sourceUrl ? (
+                      <>
+                        {" "}
+                        <a href={result.opportunity.sourceUrl} target="_blank" rel="noreferrer">View vacancy ↗</a>
+                      </>
+                    ) : null}
+                  </div>
                 </article>
               ))}
             </div>
