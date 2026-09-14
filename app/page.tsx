@@ -186,8 +186,10 @@ export default function Home() {
           ? "Agent needs attention"
           : "Agent demo online";
 
-  const primaryTargets = results.filter(isPrimaryTarget);
-  const adjacentOpportunities = results.filter((result) => !isPrimaryTarget(result));
+  const recommendedResults = results.filter((result) => result.decision !== "SKIP");
+  const primaryTargets = recommendedResults.filter(isPrimaryTarget);
+  const adjacentOpportunities = recommendedResults.filter((result) => !isPrimaryTarget(result));
+  const notRecommended = results.filter((result) => result.decision === "SKIP");
 
   return (
     <main className="shell">
@@ -307,7 +309,7 @@ export default function Home() {
                   <div className="groupHeading">
                     <div>
                       <span>Adjacent opportunities</span>
-                      <p>Useful alternatives with transferable-skill overlap.</p>
+                      <p>Realistic alternatives with transferable-skill overlap.</p>
                     </div>
                     <b>{adjacentOpportunities.length}</b>
                   </div>
@@ -315,6 +317,24 @@ export default function Home() {
                     {adjacentOpportunities.map((result) => <ResultCard result={result} key={result.opportunity.id} />)}
                   </div>
                 </section>
+              ) : null}
+
+              {notRecommended.length ? (
+                <details className="rejectedGroup">
+                  <summary>
+                    <div>
+                      <span>Not recommended</span>
+                      <p>{notRecommended.length} roles were ruled out so you can focus on stronger opportunities.</p>
+                    </div>
+                    <b>{notRecommended.length}</b>
+                  </summary>
+                  <div className="rejectedIntro">
+                    These roles stay available for transparency, but the agent recommends spending application effort elsewhere.
+                  </div>
+                  <div className="cards">
+                    {notRecommended.map((result) => <ResultCard result={result} key={result.opportunity.id} />)}
+                  </div>
+                </details>
               ) : null}
             </div>
           )}
