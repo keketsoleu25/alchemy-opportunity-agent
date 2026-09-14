@@ -141,23 +141,89 @@ function qualificationFit(profile: CandidateProfile, opportunity: Opportunity) {
   };
 }
 
+type RoleFamily =
+  | "frontend"
+  | "backend"
+  | "fullstack"
+  | "software"
+  | "mobile"
+  | "qa"
+  | "data"
+  | "platform"
+  | "devops";
+
+function roleFamilies(value: string) {
+  const text = normalise(value);
+  const families = new Set<RoleFamily>();
+
+  if (/front[ -]?end/.test(text)) families.add("frontend");
+  if (/back[ -]?end/.test(text)) families.add("backend");
+  if (/full[ -]?stack/.test(text)) families.add("fullstack");
+  if (/software (developer|engineer)|application developer|web developer/.test(text)) families.add("software");
+  if (/mobile|android|ios/.test(text)) families.add("mobile");
+  if (/qa|quality|test automation|tester/.test(text)) families.add("qa");
+  if (/data engineer|data developer/.test(text)) families.add("data");
+  if (/platform|cloud engineer/.test(text)) families.add("platform");
+  if (/devops|site reliability|sre/.test(text)) families.add("devops");
+
+  // Frontend/backend/full-stack titles are software-development roles even when
+  // the literal word "software" is absent.
+  if (families.has("frontend") || families.has("backend") || families.has("fullstack")) {
+    families.add("software");
+  }
+
+  return families;
+}
+
 function preferredRoleFit(profile: CandidateProfile, opportunity: Opportunity) {
-  const title = normalise(opportunity.title);
-  const roleTerms = profile.preferredRoles
-    .flatMap((role) => normalise(role).split(/[^a-z0-9+#.]+/))
-    .filter((term) => term.length >= 4 && !["junior", "developer", "engineer", "software"].includes(term));
+  const targetFamilies = new Set<RoleFamily>();
+  profile.preferredRoles.forEach((role) => {
+    roleFamilies(role).forEach((family) => targetFamilies.add(family));
+  });
 
-  if (!roleTerms.length) return { score: 0.8, strength: undefined as string | undefined };
-  const matches = roleTerms.filter((term) => title.includes(term));
-
-  if (matches.length) {
+  if (!targetFamilies.size) {
     return {
-      score: 1,
-      strength: "Role family matches one of your stated target roles",
+      score: 0.8,
+      strength: undefined as string | undefined,
+      gap: undefined as string | undefined,
     };
   }
 
-  return { score: 0.72, strength: undefined };
+  const opportunityFamilies = roleFamilies(opportunity.title);
+  const exactMatches = [...opportunityFamilies].filter((family) => targetFamilies.has(family));
+
+  if (exactMatches.some((family) => family !== "software")) {
+    return {
+      score: 1,
+      strength: "Role family directly matches one of your stated target roles",
+      gap: undefined,
+    };
+  }
+
+  if (exactMatches.includes("software")) {
+    return {
+      score: 0.9,
+      strength: "Role is within your broader software-development target family",
+      gap: undefined,
+    };
+  }
+
+  const adjacentFamilies: RoleFamily[] = ["qa", "data", "platform", "devops", "mobile"];
+  const isAdjacent = [...opportunityFamilies].some((family) => adjacentFamilies.includes(family));
+
+  if (isAdjacent) {
+    return {
+      score: 0.42,
+      strength: undefined,
+      gap: "Role family is adjacent to, but outside, your stated target roles",
+    };
+  }
+
+  return {
+    score: 0.58,
+    strength: undefined,
+    gap: "Role title does not closely match your stated target roles",
+  };
 }
 
 function authorizationFit(profile: CandidateProfile, opportunity: Opportunity) {
@@ -207,12 +273,12 @@ export function analyseOpportunity(
   const authorization = authorizationFit(profile, opportunity);
 
   const score = Math.round(
-    (requiredRatio * 0.42 +
-      preferredRatio * 0.1 +
+    (requiredRatio * 0.4 +
+      preferredRatio * 0.09 +
       experienceScore * 0.16 +
       location.score * 0.12 +
       qualification.score * 0.08 +
-      roleFit.score * 0.07 +
+      roleFit.score * 0.1 +
       authorization.score * 0.05) *
       100,
   );
@@ -223,6 +289,7 @@ export function analyseOpportunity(
 
   if (location.hardConflict && decision === "APPLY") decision = "STRETCH";
   if (authorization.score < 0.5) decision = "SKIP";
+  if (roleFit.score < 0.5 && decision === "APPLY") decision = "STRETCH";
 
   const strengths = [
     ...matchedRequired.map((skill) => `Matches required skill: ${skill}`),
@@ -239,21 +306,22 @@ export function analyseOpportunity(
   if (experienceGap > 0) gaps.push(`Experience gap: role asks for ${opportunity.minYearsExperience}+ years`);
   if (location.gap) gaps.push(location.gap);
   if (qualification.gap) gaps.push(qualification.gap);
+  if (roleFit.gap) gaps.push(roleFit.gap);
   if (authorization.gap) gaps.push(authorization.gap);
 
   const reasoning =
     decision === "APPLY"
-      ? "The candidate covers most core requirements and the eligibility, location, and work-mode constraints are realistic for an application."
+      ? "The candidate covers most core requirements and the role family, eligibility, location, and work-mode constraints are realistic for an application."
       : decision === "STRETCH"
-        ? "There is meaningful alignment, but the application should directly address the identified skill, experience, qualification, or mobility gaps."
+        ? "There is meaningful alignment, but the application should directly address the identified skill, role-family, experience, qualification, or mobility gaps."
         : "The current eligibility or fit gaps are too large, so effort is better spent on a closer opportunity.";
 
   const nextAction =
     decision === "APPLY"
       ? "Tailor the CV to the matched requirements and prepare a focused application."
       : decision === "STRETCH"
-        ? "Apply only if you can address the listed gaps and the work arrangement is genuinely workable."
-        : "Skip this role for now and prioritise opportunities that fit your skills, eligibility, and mobility constraints.";
+        ? "Apply only if you can address the listed gaps and the role direction and work arrangement are genuinely workable."
+        : "Skip this role for now and prioritise opportunities that fit your skills, target role family, eligibility, and mobility constraints.";
 
   return { opportunity, score, decision, strengths, gaps, reasoning, nextAction };
 }
