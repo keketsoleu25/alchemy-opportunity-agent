@@ -8,6 +8,51 @@ export type DiscoveryResult = {
   note: string;
 };
 
+const softwareIntentTerms = [
+  "software",
+  "developer",
+  "frontend",
+  "front-end",
+  "backend",
+  "back-end",
+  "full-stack",
+  "full stack",
+  "engineer",
+  "engineering",
+  "programmer",
+  "web developer",
+  "devops",
+  "cloud",
+  "platform",
+];
+
+const softwareRoleTerms = [
+  "software",
+  "developer",
+  "engineer",
+  "engineering",
+  "frontend",
+  "front-end",
+  "backend",
+  "back-end",
+  "full-stack",
+  "full stack",
+  "web developer",
+  "application developer",
+  "mobile developer",
+  "android",
+  "ios",
+  "devops",
+  "platform",
+  "cloud engineer",
+  "qa engineer",
+  "quality engineer",
+  "test automation",
+  "data engineer",
+  "graduate developer",
+  "graduate engineer",
+];
+
 function tokensFromEnv() {
   return (process.env.GREENHOUSE_BOARD_TOKENS ?? "")
     .split(",")
@@ -19,7 +64,31 @@ function queryTerms(query: string) {
   return query
     .toLowerCase()
     .split(/[^a-z0-9+#.]+/)
-    .filter((term) => term.length >= 3 && !["find", "realistic", "software", "opportunities", "match", "profile"].includes(term));
+    .filter(
+      (term) =>
+        term.length >= 3 &&
+        !["find", "realistic", "opportunities", "match", "profile", "that", "with", "role", "roles"].includes(term),
+    );
+}
+
+function hasSoftwareIntent(query: string) {
+  const lower = query.toLowerCase();
+  return softwareIntentTerms.some((term) => lower.includes(term));
+}
+
+function isSoftwareOpportunity(opportunity: Opportunity) {
+  const title = opportunity.title.toLowerCase();
+  const summary = opportunity.summary.toLowerCase();
+
+  if (softwareRoleTerms.some((term) => title.includes(term))) return true;
+
+  // Generic graduate / early-career titles are only accepted when the description
+  // clearly places the role inside software or engineering.
+  if (/(early careers?|graduate|intern(ship)?)/i.test(opportunity.title)) {
+    return softwareRoleTerms.some((term) => summary.includes(term));
+  }
+
+  return false;
 }
 
 function rankByQuery(opportunities: Opportunity[], query: string) {
@@ -61,11 +130,17 @@ export async function discoverOpportunities(query: string): Promise<DiscoveryRes
   }
 
   const unique = Array.from(new Map(live.map((job) => [job.sourceUrl ?? job.id, job])).values());
-  const ranked = rankByQuery(unique, query).slice(0, 40);
+  const softwareIntent = hasSoftwareIntent(query);
+  const relevant = softwareIntent ? unique.filter(isSoftwareOpportunity) : unique;
+  const ranked = rankByQuery(relevant, query).slice(0, 40);
+
+  const filterNote = softwareIntent
+    ? ` Filtered ${unique.length} imported vacancies down to ${relevant.length} software-relevant roles before scoring.`
+    : "";
 
   return {
     opportunities: ranked,
     sourceMode: "live-greenhouse",
-    note: `Imported ${ranked.length} live vacancies from configured Greenhouse boards.`,
+    note: `Imported live vacancies from configured Greenhouse boards.${filterNote}`,
   };
 }
