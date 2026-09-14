@@ -19,6 +19,10 @@ function cleanStringArray(value: unknown, fallback: string[]): string[] {
   return cleaned.length ? cleaned : fallback;
 }
 
+function boolOrFallback(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
 function buildProfile(input?: Partial<CandidateProfile>): CandidateProfile {
   const yearsExperience = Number(input?.yearsExperience);
 
@@ -35,10 +39,14 @@ function buildProfile(input?: Partial<CandidateProfile>): CandidateProfile {
     skills: cleanStringArray(input?.skills, demoProfile.skills),
     qualifications: cleanStringArray(input?.qualifications, demoProfile.qualifications),
     preferredRoles: cleanStringArray(input?.preferredRoles, demoProfile.preferredRoles),
-    remotePreferred:
-      typeof input?.remotePreferred === "boolean"
-        ? input.remotePreferred
-        : demoProfile.remotePreferred,
+    remotePreferred: boolOrFallback(input?.remotePreferred, demoProfile.remotePreferred),
+    hybridAccepted: boolOrFallback(input?.hybridAccepted, demoProfile.hybridAccepted),
+    onSiteAccepted: boolOrFallback(input?.onSiteAccepted, demoProfile.onSiteAccepted),
+    willingToRelocate: boolOrFallback(input?.willingToRelocate, demoProfile.willingToRelocate),
+    workAuthorizedCountries: cleanStringArray(
+      input?.workAuthorizedCountries,
+      demoProfile.workAuthorizedCountries,
+    ),
   };
 }
 
@@ -61,9 +69,6 @@ export async function POST(request: NextRequest) {
   const query = typeof body.query === "string" ? body.query.trim() : "";
   const discovery = await discoverOpportunities(query);
 
-  // Discovery has already ranked the vacancies by request relevance and seniority.
-  // Preserve that ordering inside each decision tier instead of discarding it with
-  // a global score-only sort. Match percentage is used as a tie-breaker only.
   const scored = discovery.opportunities
     .map((opportunity, discoveryIndex) => ({
       result: analyseOpportunity(profile, opportunity),
@@ -90,7 +95,7 @@ export async function POST(request: NextRequest) {
       results: scored,
       mode: "deterministic-fallback",
       sourceMode: discovery.sourceMode,
-      note: `${discovery.note} Final ordering prioritises APPLY, then STRETCH, then SKIP while preserving discovery relevance. Bedrock is disabled, so deterministic scoring and explanations are active.`,
+      note: `${discovery.note} Candidate qualifications, role preferences, work-mode tolerance, relocation preference, and work authorization now feed the guarded scoring engine. Bedrock is disabled, so deterministic scoring and explanations are active.`,
     });
   }
 
@@ -106,7 +111,7 @@ export async function POST(request: NextRequest) {
       sourceMode: discovery.sourceMode,
       model: config.modelId,
       region: config.region,
-      note: `${discovery.note} Final ordering prioritises APPLY, then STRETCH, then SKIP while preserving discovery relevance. Deterministic scoring is preserved; Amazon Bedrock generates the user-facing reasoning.`,
+      note: `${discovery.note} Candidate qualifications, role preferences, work-mode tolerance, relocation preference, and work authorization feed deterministic scoring; Amazon Bedrock generates the user-facing reasoning.`,
     });
   } catch (error) {
     console.error("Bedrock reasoning failed; using deterministic fallback.", error);
@@ -117,7 +122,7 @@ export async function POST(request: NextRequest) {
       results: scored,
       mode: "deterministic-fallback",
       sourceMode: discovery.sourceMode,
-      note: `${discovery.note} Final ordering prioritises APPLY, then STRETCH, then SKIP while preserving discovery relevance. Bedrock invocation failed, so the agent safely returned deterministic results.`,
+      note: `${discovery.note} Candidate constraints remain enforced. Bedrock invocation failed, so the agent safely returned deterministic results.`,
     });
   }
 }
