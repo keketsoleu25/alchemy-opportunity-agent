@@ -3,7 +3,7 @@ import { demoProfile } from "@/lib/data";
 import { discoverOpportunities } from "@/lib/discovery";
 import { analyseOpportunity } from "@/lib/scoring";
 import { enrichWithBedrock, getBedrockConfig } from "@/lib/bedrock";
-import type { CandidateProfile } from "@/lib/types";
+import type { CandidateProfile, MatchResult } from "@/lib/types";
 
 type AnalyzeRequest = {
   profile?: Partial<CandidateProfile>;
@@ -42,6 +42,12 @@ function buildProfile(input?: Partial<CandidateProfile>): CandidateProfile {
   };
 }
 
+function decisionPriority(result: MatchResult) {
+  if (result.decision === "APPLY") return 3;
+  if (result.decision === "STRETCH") return 2;
+  return 1;
+}
+
 export async function POST(request: NextRequest) {
   let body: AnalyzeRequest = {};
 
@@ -55,10 +61,25 @@ export async function POST(request: NextRequest) {
   const query = typeof body.query === "string" ? body.query.trim() : "";
   const discovery = await discoverOpportunities(query);
 
+  // Discovery has already ranked the vacancies by request relevance and seniority.
+  // Preserve that ordering inside each decision tier instead of discarding it with
+  // a global score-only sort. Match percentage is used as a tie-breaker only.
   const scored = discovery.opportunities
-    .map((opportunity) => analyseOpportunity(profile, opportunity))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 12);
+    .map((opportunity, discoveryIndex) => ({
+      result: analyseOpportunity(profile, opportunity),
+      discoveryIndex,
+    }))
+    .sort((a, b) => {
+      const decisionDelta = decisionPriority(b.result) - decisionPriority(a.result);
+      if (decisionDelta !== 0) return decisionDelta;
+
+      const relevanceDelta = a.discoveryIndex - b.discoveryIndex;
+      if (relevanceDelta !== 0) return relevanceDelta;
+
+      return b.result.score - a.result.score;
+    })
+    .slice(0, 12)
+    .map(({ result }) => result);
 
   const bedrockEnabled = process.env.BEDROCK_ENABLED === "true";
 
@@ -69,7 +90,7 @@ export async function POST(request: NextRequest) {
       results: scored,
       mode: "deterministic-fallback",
       sourceMode: discovery.sourceMode,
-      note: `${discovery.note} Bedrock is disabled, so deterministic scoring and explanations are active.`,
+      note: `${discovery.note} Final ordering prioritises APPLY, then STRETCH, then SKIP while preserving discovery relevance. Bedrock is disabled, so deterministic scoring and explanations are active.`,
     });
   }
 
@@ -85,7 +106,7 @@ export async function POST(request: NextRequest) {
       sourceMode: discovery.sourceMode,
       model: config.modelId,
       region: config.region,
-      note: `${discovery.note} Deterministic scoring is preserved; Amazon Bedrock generates the user-facing reasoning.`,
+      note: `${discovery.note} Final ordering prioritises APPLY, then STRETCH, then SKIP while preserving discovery relevance. Deterministic scoring is preserved; Amazon Bedrock generates the user-facing reasoning.`,
     });
   } catch (error) {
     console.error("Bedrock reasoning failed; using deterministic fallback.", error);
@@ -96,7 +117,7 @@ export async function POST(request: NextRequest) {
       results: scored,
       mode: "deterministic-fallback",
       sourceMode: discovery.sourceMode,
-      note: `${discovery.note} Bedrock invocation failed, so the agent safely returned deterministic results.`,
+      note: `${discovery.note} Final ordering prioritises APPLY, then STRETCH, then SKIP while preserving discovery relevance. Bedrock invocation failed, so the agent safely returned deterministic results.`,
     });
   }
 }
