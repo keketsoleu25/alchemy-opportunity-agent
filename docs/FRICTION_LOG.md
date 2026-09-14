@@ -26,3 +26,14 @@ This file records real friction encountered while building Alchemy Opportunity A
 - **Severity:** Low
 - **Workaround:** Build the initial codebase locally, then create the empty public GitHub repository and push/import the project.
 - **Actionable suggestion:** Expose repository creation alongside repository content operations for smoother zero-to-first-commit onboarding.
+
+## 2026-09-14 — AWS CLI onboarding and Bedrock runtime verification
+
+- **Tool / service:** AWS CLI v2 + Amazon Bedrock Runtime
+- **Task attempted:** Authenticate locally and invoke a Bedrock model through the Converse API.
+- **Steps taken:** Installed AWS CLI v2, used `aws login`, verified identity with STS, listed Bedrock foundation models, then attempted a direct `bedrock-runtime converse` call.
+- **Expected result:** Receive a short model response confirming runtime access.
+- **Actual result:** The first application attempt hit an expired temporary login session. After reauthentication, the direct Converse call returned `AccessDeniedException` because the AWS account was still undergoing verification. Inline PowerShell JSON also proved fragile, so the request payload was moved to JSON files for testing.
+- **Severity:** Medium
+- **Workaround:** Keep `BEDROCK_ENABLED=false` until account verification completes and rely on the deterministic scoring fallback so the application remains fully usable. Use `file://` JSON payloads for CLI runtime tests.
+- **Actionable suggestion:** Surface account verification status earlier in Bedrock onboarding, before runtime invocation, and provide Windows PowerShell examples that avoid brittle inline JSON quoting.
