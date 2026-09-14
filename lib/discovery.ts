@@ -53,6 +53,22 @@ const softwareRoleTerms = [
   "graduate engineer",
 ];
 
+const seniorTitleTerms = [
+  "senior",
+  "sr ",
+  "sr.",
+  "lead",
+  "team lead",
+  "principal",
+  "staff",
+  "manager",
+  "head of",
+  "director",
+  "architect",
+  "vp ",
+  "vice president",
+];
+
 function tokensFromEnv() {
   return (process.env.GREENHOUSE_BOARD_TOKENS ?? "")
     .split(",")
@@ -76,6 +92,13 @@ function hasSoftwareIntent(query: string) {
   return softwareIntentTerms.some((term) => lower.includes(term));
 }
 
+function hasJuniorIntent(query: string) {
+  const lower = query.toLowerCase();
+  return ["junior", "entry level", "entry-level", "graduate", "intern", "internship", "early career", "early-career"].some(
+    (term) => lower.includes(term),
+  );
+}
+
 function isSoftwareOpportunity(opportunity: Opportunity) {
   const title = opportunity.title.toLowerCase();
   const summary = opportunity.summary.toLowerCase();
@@ -89,6 +112,11 @@ function isSoftwareOpportunity(opportunity: Opportunity) {
   }
 
   return false;
+}
+
+function isCompatibleWithJuniorIntent(opportunity: Opportunity) {
+  const title = opportunity.title.toLowerCase();
+  return !seniorTitleTerms.some((term) => title.includes(term));
 }
 
 function rankByQuery(opportunities: Opportunity[], query: string) {
@@ -131,16 +159,30 @@ export async function discoverOpportunities(query: string): Promise<DiscoveryRes
 
   const unique = Array.from(new Map(live.map((job) => [job.sourceUrl ?? job.id, job])).values());
   const softwareIntent = hasSoftwareIntent(query);
-  const relevant = softwareIntent ? unique.filter(isSoftwareOpportunity) : unique;
-  const ranked = rankByQuery(relevant, query).slice(0, 40);
+  const juniorIntent = hasJuniorIntent(query);
 
-  const filterNote = softwareIntent
-    ? ` Filtered ${unique.length} imported vacancies down to ${relevant.length} software-relevant roles before scoring.`
-    : "";
+  const softwareRelevant = softwareIntent ? unique.filter(isSoftwareOpportunity) : unique;
+  const seniorityRelevant = juniorIntent
+    ? softwareRelevant.filter(isCompatibleWithJuniorIntent)
+    : softwareRelevant;
+
+  const ranked = rankByQuery(seniorityRelevant, query).slice(0, 40);
+
+  const notes: string[] = [];
+  if (softwareIntent) {
+    notes.push(
+      `Filtered ${unique.length} imported vacancies down to ${softwareRelevant.length} software-relevant roles before scoring.`,
+    );
+  }
+  if (juniorIntent) {
+    notes.push(
+      `Removed senior/lead/manager-level titles, leaving ${seniorityRelevant.length} roles compatible with junior intent.`,
+    );
+  }
 
   return {
     opportunities: ranked,
     sourceMode: "live-greenhouse",
-    note: `Imported live vacancies from configured Greenhouse boards.${filterNote}`,
+    note: `Imported live vacancies from configured Greenhouse boards.${notes.length ? ` ${notes.join(" ")}` : ""}`,
   };
 }
