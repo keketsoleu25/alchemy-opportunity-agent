@@ -20,6 +20,10 @@ const initialProfile: CandidateProfile = {
   qualifications: ["Software development training", "Matric"],
   preferredRoles: ["Junior Software Developer", "Frontend Developer", "Full-Stack Developer"],
   remotePreferred: true,
+  hybridAccepted: true,
+  onSiteAccepted: true,
+  willingToRelocate: false,
+  workAuthorizedCountries: ["South Africa"],
 };
 
 export default function Home() {
@@ -33,9 +37,21 @@ export default function Home() {
   );
   const [profile, setProfile] = useState(initialProfile);
   const [skillsText, setSkillsText] = useState(initialProfile.skills.join(", "));
+  const [qualificationsText, setQualificationsText] = useState(initialProfile.qualifications.join(", "));
+  const [preferredRolesText, setPreferredRolesText] = useState(initialProfile.preferredRoles.join(", "));
+  const [authorizationText, setAuthorizationText] = useState(
+    initialProfile.workAuthorizedCountries.join(", "),
+  );
 
   function updateProfile<K extends keyof CandidateProfile>(key: K, value: CandidateProfile[K]) {
     setProfile((current) => ({ ...current, [key]: value }));
+  }
+
+  function parseList(value: string) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
 
   async function runAgent() {
@@ -43,12 +59,12 @@ export default function Home() {
     setNote("Discovering and analysing opportunities…");
 
     try {
-      const candidate = {
+      const candidate: CandidateProfile = {
         ...profile,
-        skills: skillsText
-          .split(",")
-          .map((skill) => skill.trim())
-          .filter(Boolean),
+        skills: parseList(skillsText),
+        qualifications: parseList(qualificationsText),
+        preferredRoles: parseList(preferredRolesText),
+        workAuthorizedCountries: parseList(authorizationText),
       };
 
       const response = await fetch("/api/analyze", {
@@ -154,6 +170,29 @@ export default function Home() {
             onChange={(event) => setSkillsText(event.target.value)}
           />
 
+          <label htmlFor="qualifications">Qualifications (comma separated)</label>
+          <textarea
+            id="qualifications"
+            className="compactTextarea"
+            value={qualificationsText}
+            onChange={(event) => setQualificationsText(event.target.value)}
+          />
+
+          <label htmlFor="preferredRoles">Target roles (comma separated)</label>
+          <textarea
+            id="preferredRoles"
+            className="compactTextarea"
+            value={preferredRolesText}
+            onChange={(event) => setPreferredRolesText(event.target.value)}
+          />
+
+          <label htmlFor="authorization">Work authorization (comma separated countries)</label>
+          <input
+            id="authorization"
+            value={authorizationText}
+            onChange={(event) => setAuthorizationText(event.target.value)}
+          />
+
           <label className="toggleRow" htmlFor="remotePreferred">
             <input
               id="remotePreferred"
@@ -164,13 +203,43 @@ export default function Home() {
             <span>Prefer remote opportunities</span>
           </label>
 
+          <label className="toggleRow" htmlFor="hybridAccepted">
+            <input
+              id="hybridAccepted"
+              type="checkbox"
+              checked={profile.hybridAccepted}
+              onChange={(event) => updateProfile("hybridAccepted", event.target.checked)}
+            />
+            <span>Hybrid work is acceptable</span>
+          </label>
+
+          <label className="toggleRow" htmlFor="onSiteAccepted">
+            <input
+              id="onSiteAccepted"
+              type="checkbox"
+              checked={profile.onSiteAccepted}
+              onChange={(event) => updateProfile("onSiteAccepted", event.target.checked)}
+            />
+            <span>On-site work is acceptable</span>
+          </label>
+
+          <label className="toggleRow" htmlFor="willingToRelocate">
+            <input
+              id="willingToRelocate"
+              type="checkbox"
+              checked={profile.willingToRelocate}
+              onChange={(event) => updateProfile("willingToRelocate", event.target.checked)}
+            />
+            <span>Willing to relocate for the right role</span>
+          </label>
+
           <label htmlFor="prompt">Your request</label>
           <textarea id="prompt" value={message} onChange={(event) => setMessage(event.target.value)} />
 
           <button onClick={runAgent} disabled={loading}>
             {loading ? "Discovering opportunities…" : "Run opportunity analysis"}
           </button>
-          <small>Milestone 4: live-source ingestion feeds the same guarded decision engine.</small>
+          <small>Milestone 5: candidate constraints now shape eligibility and fit.</small>
           <small>Source mode: {sourceMode === "live-greenhouse" ? "Live Greenhouse boards" : "Demo fallback"}</small>
           {note ? <small>{note}</small> : null}
         </div>
@@ -205,11 +274,11 @@ export default function Home() {
                   <div className="columns">
                     <div>
                       <h4>Evidence</h4>
-                      {result.strengths.slice(0, 3).map((item) => <span className="good" key={item}>✓ {item}</span>)}
+                      {result.strengths.slice(0, 4).map((item) => <span className="good" key={item}>✓ {item}</span>)}
                     </div>
                     <div>
                       <h4>Gaps</h4>
-                      {(result.gaps.length ? result.gaps : ["No material gaps found"]).slice(0, 3).map((item) => <span className="gap" key={item}>• {item}</span>)}
+                      {(result.gaps.length ? result.gaps : ["No material gaps found"]).slice(0, 4).map((item) => <span className="gap" key={item}>• {item}</span>)}
                     </div>
                   </div>
                   <div className="next">
