@@ -8,6 +8,10 @@ export type CandidateProfile = {
   qualifications: string[];
   preferredRoles: string[];
   remotePreferred: boolean;
+  hybridAccepted: boolean;
+  onSiteAccepted: boolean;
+  willingToRelocate: boolean;
+  workAuthorizedCountries: string[];
 };
 
 export type Opportunity = {
