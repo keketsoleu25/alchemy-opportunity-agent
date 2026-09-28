@@ -63,6 +63,7 @@ Record the working browser flow, upload the video publicly to YouTube or Vimeo, 
 ## Final review
 
 - Run the guided and live flows after the latest deployment.
+- **Verified 2026-09-28:** The deployed guided example showed APPLY, STRETCH, and SKIP; the application brief and hypothetical CSS scenario rendered. The live Greenhouse run imported 113 vacancies, filtered to 9 junior-compatible roles, and correctly ruled all 9 out for the sample Johannesburg candidate. Seattle was marked work mode unconfirmed and SKIP; detected skills were labelled for verification. Live inventory is variable and may have no actionable match, so use the labelled guided example for the repeatable video segment.
 - Confirm the README setup works from a clean clone and the MIT license is visible.
 - Attach the public English demo video URL.
 - Fill the Devpost description, feedback, track and repository fields using this draft.
