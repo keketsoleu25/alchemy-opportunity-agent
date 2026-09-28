@@ -124,6 +124,7 @@ export default function Home() {
     "Find realistic junior software opportunities that match my profile.",
   );
   const [profile, setProfile] = useState(initialProfile);
+  const [useDemo, setUseDemo] = useState(false);
   const [skillsText, setSkillsText] = useState(initialProfile.skills.join(", "));
   const [qualificationsText, setQualificationsText] = useState(initialProfile.qualifications.join(", "));
   const [preferredRolesText, setPreferredRolesText] = useState(initialProfile.preferredRoles.join(", "));
@@ -158,7 +159,7 @@ export default function Home() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile: candidate, query: message }),
+        body: JSON.stringify({ profile: candidate, query: message, useDemo }),
       });
 
       if (!response.ok) throw new Error(`Analysis failed with status ${response.status}`);
@@ -270,6 +271,11 @@ export default function Home() {
 
           <label htmlFor="prompt">Your request</label>
           <textarea id="prompt" value={message} onChange={(event) => setMessage(event.target.value)} />
+
+          <label className="toggleRow" htmlFor="useDemo">
+            <input id="useDemo" type="checkbox" checked={useDemo} onChange={(event) => setUseDemo(event.target.checked)} />
+            <span>Use guided example (fictional vacancies)</span>
+          </label>
 
           <button onClick={runAgent} disabled={loading}>
             {loading ? "Discovering opportunities…" : "Run opportunity analysis"}

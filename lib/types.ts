@@ -19,7 +19,7 @@ export type Opportunity = {
   title: string;
   company: string;
   location: string;
-  workMode: "Remote" | "Hybrid" | "On-site";
+  workMode: "Remote" | "Hybrid" | "On-site" | "Unspecified";
   minYearsExperience: number;
   requiredSkills: string[];
   preferredSkills: string[];

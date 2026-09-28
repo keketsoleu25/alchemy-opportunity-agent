@@ -36,6 +36,7 @@ If a live source fails or Bedrock is unavailable, the application falls back saf
 - Collapsed Not Recommended section for ruled-out roles
 - "Why ranked here" signals such as target-role match, skills match, remote fit, experience fit and mobility constraints
 - Safe deterministic fallback when Bedrock is disabled or unavailable
+- Clearly labelled guided example with fictional vacancies for repeatable demos
 
 ## Architecture
 
@@ -80,6 +81,7 @@ GREENHOUSE_BOARD_TOKENS=takealotgroup,impact,bashdotcom,offerzen
 The application fetches the configured boards, normalizes vacancy data, extracts recognizable technology signals, estimates experience requirements, preserves the original vacancy URL, filters out clearly irrelevant seniority and role-family noise, and feeds the resulting opportunities into the matching engine.
 
 If no board tokens are configured or all configured boards fail, the application uses demo opportunities and clearly reports that fallback mode in the UI.
+For a repeatable walkthrough, select **Use guided example (fictional vacancies)**. Unselect it for the configured live boards. Live job metadata is inferred from public postings; candidates should confirm work mode, seniority and eligibility on the original vacancy page before applying.
 
 ## Decision model
 

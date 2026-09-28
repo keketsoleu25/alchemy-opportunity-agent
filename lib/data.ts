@@ -1,4 +1,4 @@
-import { CandidateProfile, Opportunity } from "./types";
+import type { CandidateProfile, Opportunity } from "./types";
 
 export const demoProfile: CandidateProfile = {
   name: "Demo Candidate",
@@ -41,7 +41,7 @@ export const demoOpportunities: Opportunity[] = [
     company: "Mzanzi Commerce",
     location: "Cape Town, South Africa",
     workMode: "Remote",
-    minYearsExperience: 2,
+    minYearsExperience: 3,
     requiredSkills: ["TypeScript", "React", "CSS"],
     preferredSkills: ["Next.js", "Testing"],
     summary: "Own responsive interfaces for a growing commerce platform.",
