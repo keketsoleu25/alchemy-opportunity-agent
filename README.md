@@ -32,6 +32,9 @@ If a live source fails or Bedrock is unavailable, the application falls back saf
 - Target-role family weighting
 - Deterministic APPLY / STRETCH / SKIP decisions
 - Evidence, gaps and next-action explanations
+- Estimated skill evidence is labelled as inferred when extracted from unstructured listings
+- A truthful skill scenario shows how the score and decision would change
+- Expandable application brief grounded in profile evidence and the original vacancy
 - Primary Targets vs Adjacent Opportunities
 - Collapsed Not Recommended section for ruled-out roles
 - "Why ranked here" signals such as target-role match, skills match, remote fit, experience fit and mobility constraints

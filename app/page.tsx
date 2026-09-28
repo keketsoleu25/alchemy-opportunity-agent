@@ -41,7 +41,7 @@ function rankingSignals(result: MatchResult) {
   else if (gaps.includes("adjacent to your stated target")) signals.push("Adjacent role");
 
   const skillMatches = result.strengths.filter((item) =>
-    item.toLowerCase().includes("matches required skill"),
+    /matches required skill|detected skill match/i.test(item),
   ).length;
   if (skillMatches >= 3) signals.push("Strong skills match");
   else if (skillMatches >= 1) signals.push("Some skills match");
@@ -70,7 +70,7 @@ function ResultCard({ result }: { result: MatchResult }) {
         <div>
           <h3>{result.opportunity.title}</h3>
           <p>
-            {result.opportunity.company} · {result.opportunity.workMode}
+            {result.opportunity.company} · {result.opportunity.location} · {result.opportunity.workMode === "Unspecified" ? "Work mode unconfirmed" : result.opportunity.workMode}
             {result.opportunity.source ? ` · ${result.opportunity.source}` : ""}
           </p>
         </div>
@@ -87,10 +87,16 @@ function ResultCard({ result }: { result: MatchResult }) {
       ) : null}
 
       <div className="scoreRow">
-        <strong>{result.score}% match</strong>
+        <strong>{result.score}% estimated fit</strong>
         <div className="scoreTrack"><div style={{ width: `${result.score}%` }} /></div>
       </div>
+      {result.opportunity.skillEvidence === "inferred" ? (
+        <p className="sourceCaveat">Technology signals were detected in listing text; confirm actual requirements on the source page.</p>
+      ) : null}
       <p className="reasoning">{result.reasoning}</p>
+      {result.whatIf ? (
+        <p className="whatIf">If you can truthfully add <strong>{result.whatIf.skill}</strong> to your profile, the estimated fit becomes <strong>{result.whatIf.score}%</strong> ({result.whatIf.decision}). This is a scenario, not an application claim.</p>
+      ) : null}
       <div className="columns">
         <div>
           <h4>Evidence</h4>
@@ -110,6 +116,12 @@ function ResultCard({ result }: { result: MatchResult }) {
           </>
         ) : null}
       </div>
+      {result.decision !== "SKIP" ? (
+        <details className="applicationBrief">
+          <summary>Prepare an honest application brief</summary>
+          <ul>{result.applicationBrief.map((item) => <li key={item}>{item}</li>)}</ul>
+        </details>
+      ) : null}
     </article>
   );
 }
