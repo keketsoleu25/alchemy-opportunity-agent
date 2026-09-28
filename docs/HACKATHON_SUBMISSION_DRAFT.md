@@ -24,7 +24,7 @@ South African early-career candidates often face large job feeds with unclear se
 
 ### What it does
 
-The simulated Alexa+ web conversation accepts a request and editable candidate profile. It imports public Greenhouse vacancies, filters by role family and junior intent, evaluates skills, experience, qualifications, work authorization, location and work arrangement, then separates primary targets, adjacent roles and ruled-out roles. Each card shows a score, decision, evidence, gaps, next action and original vacancy link. A clearly marked fictional guided example provides a repeatable demonstration when live inventory changes. Amazon Bedrock Converse code can add short explanations to the top actionable results when configured; deterministic scoring and a safe explanation fallback remain available.
+The simulated Alexa+ web conversation accepts a request and editable candidate profile. It imports public Greenhouse vacancies, filters by role family and junior intent, evaluates skills, experience, qualifications, work authorization, location and work arrangement, then separates primary targets, adjacent roles and ruled-out roles. Each card shows an estimated fit, decision, evidence, gaps, next action and original vacancy link. Inferred technology signals are marked as such; an application brief and a truthful skill scenario help the candidate act on the decision. A clearly marked fictional guided example provides a repeatable demonstration when live inventory changes. Amazon Bedrock Converse code can add short explanations to the top actionable results when configured; deterministic scoring and a safe explanation fallback remain available.
 
 ### How it was built
 
@@ -53,9 +53,9 @@ Verify a real Nova invocation in the owner's AWS account, improve source coverag
 | 0:00–0:20 | Open the live site and show the candidate profile | “Finding a vacancy is easy. Deciding whether it is realistic takes more work.” |
 | 0:20–0:45 | State junior software request and mobility constraints | “The candidate controls skills, qualifications, location, work authorization and work-mode preferences.” |
 | 0:45–1:15 | Select guided example, run analysis | “This labelled fictional scenario shows a clear APPLY, a stretch, and a role to skip.” |
-| 1:15–1:40 | Show evidence, gaps and next action | “The score and decision are rule based; the candidate can see exactly why.” |
-| 1:40–2:10 | Unselect guided example; run live discovery | “Now the same workflow imports public vacancies and links back to the source.” |
-| 2:10–2:30 | Point out conservative work-mode/seniority results and source link | “Unclear job metadata stays uncertain instead of being presented as a confident match.” |
+| 1:15–1:45 | Show evidence, one skill scenario and application brief | “The decision is rule based. A truthful what-if shows whether a skill changes the result, then the brief turns evidence into an application plan.” |
+| 1:45–2:15 | Unselect guided example; run live discovery | “Now the same workflow imports public vacancies and links back to the source.” |
+| 2:15–2:30 | Point out inferred-skill notice and work-mode uncertainty | “Unstructured job text is labelled as inferred; unclear requirements stay uncertain.” |
 | 2:30–2:45 | Show repo, architecture and friction log | “The code, setup and real integration friction are public. Bedrock is optional until live access is verified.” |
 
 Record the working browser flow, upload the video publicly to YouTube or Vimeo, and paste its final URL into Devpost. Keep the video under three minutes. Do not show AWS credentials, private support messages or personal account details.

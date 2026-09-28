@@ -141,9 +141,11 @@ function qualificationFit(profile: CandidateProfile, opportunity: Opportunity) {
   const requirement = normalise(opportunity.qualificationRequired);
   const qualifications = profile.qualifications.map(normalise);
   const asksForDegree = /bachelor|degree|bsc|b\.sc/.test(requirement);
-  const hasDegree = qualifications.some((item) => /bachelor|degree|bsc|b\.sc/.test(item));
+  const hasDegree = qualifications.some((item) =>
+    /bachelor|degree|bsc|b\.sc/.test(item) && !/incomplete|unfinished|not completed|in progress/.test(item),
+  );
   const mentionsEquivalent = requirement.includes("equivalent experience");
-  const hasEquivalentEvidence = profile.yearsExperience >= 2 || qualifications.some((item) => item.includes("software"));
+  const hasEquivalentEvidence = profile.yearsExperience >= 2;
 
   if ((asksForDegree && hasDegree) || (mentionsEquivalent && hasEquivalentEvidence)) {
     return {
@@ -273,6 +275,7 @@ function authorizationFit(profile: CandidateProfile, opportunity: Opportunity) {
 export function analyseOpportunity(
   profile: CandidateProfile,
   opportunity: Opportunity,
+  includeWhatIf = true,
 ): MatchResult {
   const candidateSkills = new Set(profile.skills.map(normalise));
   const matchedRequired = opportunity.requiredSkills.filter((skill) =>
@@ -291,8 +294,9 @@ export function analyseOpportunity(
   const preferredRatio = opportunity.preferredSkills.length
     ? matchedPreferred.length / opportunity.preferredSkills.length
     : 1;
-  const experienceGap = Math.max(0, opportunity.minYearsExperience - profile.yearsExperience);
-  const experienceScore = experienceGap === 0 ? 1 : experienceGap === 1 ? 0.65 : 0.15;
+  const experienceKnown = opportunity.experienceRequirementKnown !== false;
+  const experienceGap = experienceKnown ? Math.max(0, opportunity.minYearsExperience - profile.yearsExperience) : 0;
+  const experienceScore = !experienceKnown ? 0.7 : experienceGap === 0 ? 1 : experienceGap === 1 ? 0.65 : 0.15;
   const location = locationFit(profile, opportunity);
   const qualification = qualificationFit(profile, opportunity);
   const roleFit = preferredRoleFit(profile, opportunity);
@@ -317,19 +321,21 @@ export function analyseOpportunity(
   if (authorization.score < 0.5) decision = "SKIP";
   if (roleFit.score < 0.5 && decision === "APPLY") decision = "STRETCH";
 
+  const inferredSkills = opportunity.skillEvidence === "inferred";
   const strengths = [
-    ...matchedRequired.map((skill) => `Matches required skill: ${skill}`),
-    ...matchedPreferred.map((skill) => `Matches preferred skill: ${skill}`),
+    ...matchedRequired.map((skill) => inferredSkills ? `Detected skill match: ${skill}` : `Matches required skill: ${skill}`),
+    ...matchedPreferred.map((skill) => inferredSkills ? `Additional detected skill: ${skill}` : `Matches preferred skill: ${skill}`),
   ];
 
-  if (experienceGap === 0) strengths.push("Meets the stated experience requirement");
+  if (experienceKnown && experienceGap === 0) strengths.push("Meets the stated experience requirement");
   if (location.strength) strengths.push(location.strength);
   if (qualification.strength) strengths.push(qualification.strength);
   if (roleFit.strength) strengths.push(roleFit.strength);
   if (authorization.strength) strengths.push(authorization.strength);
 
-  const gaps = [...missingRequired.map((skill) => `Missing required skill: ${skill}`)];
+  const gaps = [...missingRequired.map((skill) => inferredSkills ? `Detected skill to verify: ${skill}` : `Missing required skill: ${skill}`)];
   if (experienceGap > 0) gaps.push(`Experience gap: role asks for ${opportunity.minYearsExperience}+ years`);
+  if (!experienceKnown) gaps.push("Experience requirement was not clearly stated; verify on the source page");
   if (location.gap) gaps.push(location.gap);
   if (qualification.gap) gaps.push(qualification.gap);
   if (roleFit.gap) gaps.push(roleFit.gap);
@@ -349,5 +355,27 @@ export function analyseOpportunity(
         ? "Apply only if you can address the listed gaps and the role direction and work arrangement are genuinely workable."
         : "Skip this role for now and prioritise opportunities that fit your skills, target role family, eligibility, and mobility constraints.";
 
-  return { opportunity, score, decision, strengths, gaps, reasoning, nextAction };
+  const applicationBrief = decision === "SKIP"
+    ? ["Review the listed eligibility and fit gaps before spending time on an application."]
+    : [
+        `Lead with verified evidence for ${matchedRequired.slice(0, 3).join(", ") || "the relevant role family"} in your CV.`,
+        missingRequired.length
+          ? `Check whether ${missingRequired.slice(0, 2).join(" and ")} are truly required in the original posting; address genuine gaps honestly.`
+          : "Use one shipped project to show how you applied these skills.",
+        opportunity.sourceUrl
+          ? "Confirm seniority, work arrangement and application requirements on the original vacancy page."
+          : "This is a fictional guided example; use a real vacancy before applying.",
+      ];
+
+  const whatIf = includeWhatIf && decision !== "SKIP" && missingRequired.length
+    ? (() => {
+        const skill = missingRequired[0];
+        const alternative = analyseOpportunity(
+          { ...profile, skills: [...profile.skills, skill] }, opportunity, false,
+        );
+        return { skill, score: alternative.score, decision: alternative.decision };
+      })()
+    : undefined;
+
+  return { opportunity, score, decision, strengths, gaps, reasoning, nextAction, applicationBrief, whatIf };
 }

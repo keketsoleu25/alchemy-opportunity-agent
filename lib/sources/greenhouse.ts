@@ -89,9 +89,11 @@ export function inferWorkMode(location: string, title: string): Opportunity["wor
 
 function inferQualification(text: string) {
   const lower = text.toLowerCase();
-  if (lower.includes("bachelor") || lower.includes("degree")) {
+  if (/bachelor.{0,90}equivalent experience|degree.{0,70}equivalent experience/.test(lower)) {
     return "Bachelor's degree or equivalent experience";
   }
+  if (lower.includes("bachelor")) return "Bachelor's degree";
+  if (/\bdegree\b/.test(lower)) return "Degree mentioned in vacancy";
   return undefined;
 }
 
@@ -127,8 +129,10 @@ export async function fetchGreenhouseBoard(boardToken: string): Promise<Opportun
       location,
       workMode: inferWorkMode(location, job.title),
       minYearsExperience: inferExperience(content),
+      experienceRequirementKnown: /\d{1,2}\s*\+?\s*(?:years?|yrs?)/i.test(content),
       requiredSkills: skills.slice(0, 6),
       preferredSkills: skills.slice(6, 10),
+      skillEvidence: "inferred",
       qualificationRequired: inferQualification(content),
       summary: content.slice(0, 280) || "Imported from a public Greenhouse job board.",
       source: "Greenhouse",

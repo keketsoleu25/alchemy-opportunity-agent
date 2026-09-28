@@ -69,3 +69,22 @@ test("guided example shows apply, stretch and skip decisions", () => {
     "APPLY", "STRETCH", "SKIP",
   ]);
 });
+
+test("inferred listing skills are labelled as signals, not stated requirements", () => {
+  const result = analyseOpportunity(profile, opportunity({
+    skillEvidence: "inferred",
+    requiredSkills: ["TypeScript", "Python"],
+    experienceRequirementKnown: false,
+  }));
+  assert.match(result.strengths.join(" "), /Detected skill match: TypeScript/);
+  assert.match(result.gaps.join(" "), /Detected skill to verify: Python/);
+  assert.doesNotMatch(result.strengths.join(" "), /meets the stated experience/i);
+  assert.ok(result.whatIf?.score > result.score);
+});
+
+test("an incomplete degree is not counted as a completed degree", () => {
+  const result = analyseOpportunity({ ...profile, qualifications: ["BSc incomplete"] }, opportunity({
+    qualificationRequired: "Bachelor's degree",
+  }));
+  assert.match(result.gaps.join(" "), /Qualification requirement may not be met/);
+});
