@@ -274,7 +274,7 @@ export default function Home() {
           <button onClick={runAgent} disabled={loading}>
             {loading ? "Discovering opportunities…" : "Run opportunity analysis"}
           </button>
-          <small>Milestone 6: results now explain ranking and separate primary targets from adjacent opportunities.</small>
+          <small>Top actionable matches can receive Amazon Bedrock explanations when enabled; scores and decisions stay rule based.</small>
           <small>Source mode: {sourceMode === "live-greenhouse" ? "Live Greenhouse boards" : "Demo fallback"}</small>
           {note ? <small>{note}</small> : null}
         </div>

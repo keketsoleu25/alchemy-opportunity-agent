@@ -111,30 +111,32 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  try {
-    const results = await Promise.all(scored.map(enrichWithBedrock));
-    const config = getBedrockConfig();
+  // Keep the live demo responsive and bound model usage: explain the top three
+  // actionable matches, while all other cards retain deterministic reasoning.
+  const selected = scored
+    .map((result, index) => ({ result, index }))
+    .filter(({ result }) => result.decision !== "SKIP")
+    .slice(0, 3);
+  const settled = await Promise.allSettled(selected.map(({ result }) => enrichWithBedrock(result)));
+  const results = [...scored];
+  let enrichedCount = 0;
+  settled.forEach((outcome, selectedIndex) => {
+    if (outcome.status === "fulfilled" && outcome.value.reasoning !== selected[selectedIndex].result.reasoning) {
+      results[selected[selectedIndex].index] = outcome.value;
+      enrichedCount++;
+    } else if (outcome.status === "rejected") {
+      console.error("Bedrock reasoning failed for one result; using deterministic explanation.", outcome.reason);
+    }
+  });
+  const config = getBedrockConfig();
 
-    return NextResponse.json({
-      profile,
-      query,
-      results,
-      mode: "aws-bedrock",
-      sourceMode: discovery.sourceMode,
-      model: config.modelId,
-      region: config.region,
-      note: `${discovery.note} ${rankingNote} Deterministic eligibility and scoring are preserved; Amazon Bedrock generates the user-facing reasoning.`,
-    });
-  } catch (error) {
-    console.error("Bedrock reasoning failed; using deterministic fallback.", error);
-
-    return NextResponse.json({
-      profile,
-      query,
-      results: scored,
-      mode: "deterministic-fallback",
-      sourceMode: discovery.sourceMode,
-      note: `${discovery.note} ${rankingNote} Candidate constraints remain enforced. Bedrock invocation failed, so the agent safely returned deterministic results.`,
-    });
-  }
+  return NextResponse.json({
+    profile,
+    query,
+    results,
+    mode: enrichedCount ? "aws-bedrock" : "deterministic-fallback",
+    sourceMode: discovery.sourceMode,
+    ...(enrichedCount ? { model: config.modelId, region: config.region } : {}),
+    note: `${discovery.note} ${rankingNote} Scores and decisions are deterministic. Bedrock explained ${enrichedCount} of ${selected.length} selected actionable matches; the other results use deterministic explanations.`,
+  });
 }
