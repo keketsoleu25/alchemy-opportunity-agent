@@ -158,11 +158,11 @@ docs/                 architecture notes and hackathon friction log
 
 ## Open Source mini challenge
 
-This repository is a new open-source project created during the hackathon window. See [LICENSE](./LICENSE).
+This repository is a new open-source project created during the hackathon window. See [LICENSE](./LICENSE). The separate mini challenge eligibility requires an additional qualifying project or contribution; this repository alone is not presented as proof of that requirement.
 
 ## AWS Builder mini challenge
 
-Amazon Bedrock Runtime is integrated in code and model discovery is working. The project also documents a real AWS onboarding blocker and demonstrates resilient fallback behavior while the support case is being resolved.
+Amazon Bedrock Runtime is integrated in code and model discovery is working. AWS Support declined Anthropic access for this account on 2026-09-28. Amazon Nova Micro is the configured alternative, but a successful runtime invocation for this account has not yet been verified. The public deployment runs with Bedrock disabled and deterministic explanations.
 
 To verify Nova, set `BEDROCK_ENABLED=true` in `.env.local` with valid AWS credentials, run the app, and inspect the response mode and model after analysis. If access fails, the results still work with deterministic explanations. Record a successful invocation before claiming the AWS Builder integration is live in a submission.
 
