@@ -8,7 +8,7 @@ The project focuses on a practical problem: job seekers do not only need more jo
 
 ## Current milestone
 
-**Milestone 6 is complete.** The product now combines live opportunity discovery, realistic candidate constraints, guarded APPLY / STRETCH / SKIP decisions, role-family prioritization, and an explainable decision workspace.
+**Milestone 7 code is complete.** The product combines live opportunity discovery, realistic candidate constraints, guarded APPLY / STRETCH / SKIP decisions, role-family prioritization, and an explainable decision workspace. Live Bedrock invocation still needs to be verified with the owner's AWS account.
 
 Current workflow:
 
@@ -104,22 +104,18 @@ Configure AWS credentials using the AWS SDK credential chain, then edit `.env.lo
 ```env
 BEDROCK_ENABLED=true
 AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-haiku-4-5-20251001-v1:0
+BEDROCK_MODEL_ID=amazon.nova-micro-v1:0
 ```
 
 Do not commit AWS credentials to GitHub.
 
-The model ID is configurable because model availability and invocation paths can differ by AWS account and region.
+The default is Amazon Nova Micro in `us-east-1`. The model ID is configurable because availability and invocation paths can differ by account and region. Enable Bedrock only after a successful test in your AWS account. Up to three actionable matches per request receive model explanations; each failed call retains its deterministic explanation. The score, decision, and next action always come from the deterministic engine.
 
 ### Current AWS / Anthropic access status
 
 AWS CLI authentication works, STS identity verification works, and Bedrock model discovery works in `us-east-1`.
 
-Direct Bedrock Runtime Converse calls reach Bedrock but Anthropic invocation is currently blocked by first-time-use account authorization. The required Anthropic use-case form is visible in the Bedrock console, but submission returns:
-
-> Your account is not authorized to perform this action. Please create a support case.
-
-An AWS Support case has been opened for this account-level onboarding blocker. Until AWS clears the authorization issue, the project keeps:
+On 2026-09-28 AWS Support confirmed that this account is **not currently eligible for Anthropic model access**. AWS says other Bedrock services can be used. Nova Micro is now the configured default, but its runtime access has not yet been confirmed for this account. Keep this setting until a successful test:
 
 ```env
 BEDROCK_ENABLED=false
@@ -137,7 +133,7 @@ This onboarding path and fallback behavior are documented in [`docs/FRICTION_LOG
 - **Milestone 4 — Live Greenhouse opportunity ingestion:** complete
 - **Milestone 5 — Eligibility, mobility and candidate constraints:** complete
 - **Milestone 6 — Explainable decision UX:** complete
-- **Milestone 7 — Active Bedrock reasoning:** blocked pending AWS / Anthropic account authorization
+- **Milestone 7 — Active Bedrock reasoning:** Nova integration implemented; live account invocation pending verification
 
 ## Build
 
@@ -163,7 +159,7 @@ This repository is a new open-source project created during the hackathon window
 
 Amazon Bedrock Runtime is integrated in code and model discovery is working. The project also documents a real AWS onboarding blocker and demonstrates resilient fallback behavior while the support case is being resolved.
 
-Once Anthropic access is enabled, the next AWS milestone is to capture a successful Converse call in the demo and activate Bedrock-generated user-facing reasoning while keeping deterministic decisions guarded.
+To verify Nova, set `BEDROCK_ENABLED=true` in `.env.local` with valid AWS credentials, run the app, and inspect the response mode and model after analysis. If access fails, the results still work with deterministic explanations. Record a successful invocation before claiming the AWS Builder integration is live in a submission.
 
 ## License
 
