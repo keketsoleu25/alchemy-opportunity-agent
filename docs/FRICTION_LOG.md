@@ -37,3 +37,14 @@ This file records real friction encountered while building Alchemy Opportunity A
 - **Severity:** Medium
 - **Workaround:** Keep `BEDROCK_ENABLED=false` until account verification completes and rely on the deterministic scoring fallback so the application remains fully usable. Use `file://` JSON payloads for CLI runtime tests.
 - **Actionable suggestion:** Surface account verification status earlier in Bedrock onboarding, before runtime invocation, and provide Windows PowerShell examples that avoid brittle inline JSON quoting.
+
+## 2026-09-28 — Anthropic model access decision
+
+- **Tool / service:** Amazon Bedrock Anthropic access and AWS Support
+- **Task attempted:** Enable Anthropic reasoning for the opportunity agent.
+- **Steps taken:** Requested access through AWS Support after the first-time-use form was blocked; waited for service-team review.
+- **Expected result:** Account authorization for Anthropic invocation.
+- **Actual result:** AWS Support reported that the account is not currently eligible for the Anthropic model, while other Bedrock services are available. They suggested building usage history and revisiting access after a billing cycle.
+- **Severity:** Medium
+- **Workaround:** Configure Amazon Nova Micro as the default Bedrock model and keep deterministic scoring and explanation fallback. Nova runtime access in this account still requires a live test.
+- **Actionable suggestion:** Provide a clear list of models currently invocable by the account and distinguish an account access denial from a model ID or region error.
