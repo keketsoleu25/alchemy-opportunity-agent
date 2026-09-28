@@ -1,4 +1,4 @@
-import { CandidateProfile, MatchResult, Opportunity } from "./types";
+import type { CandidateProfile, MatchResult, Opportunity } from "./types";
 
 const normalise = (value: string) => value.trim().toLowerCase();
 
@@ -36,6 +36,10 @@ function appearsSouthAfrican(value: string) {
   );
 }
 
+function clearlyForeignLocation(value: string) {
+  return /\b(?:united states|usa|u\.s\.|seattle|washington|new york|california|canada|united kingdom|uk|london|germany|netherlands|australia|india|singapore)\b/i.test(value);
+}
+
 function locationFit(profile: CandidateProfile, opportunity: Opportunity) {
   const candidateLocation = profile.location.toLowerCase();
   const opportunityLocation = opportunity.location.toLowerCase();
@@ -47,11 +51,26 @@ function locationFit(profile: CandidateProfile, opportunity: Opportunity) {
   const inSouthAfrica = appearsSouthAfrican(opportunity.location);
 
   if (opportunity.workMode === "Remote") {
+    if (clearlyForeignLocation(opportunity.location)) {
+      return { score: 0.2, gap: "Remote hiring eligibility for this location needs verification", hardConflict: false };
+    }
     return {
-      score: profile.remotePreferred ? 1 : 0.9,
-      strength: profile.remotePreferred
-        ? "Remote work matches your stated preference"
-        : "Remote work keeps location flexible",
+      score: inSouthAfrica ? (profile.remotePreferred ? 1 : 0.9) : 0.65,
+      strength: inSouthAfrica
+        ? (profile.remotePreferred ? "Remote work matches your stated preference" : "Remote work keeps location flexible")
+        : undefined,
+      gap: inSouthAfrica ? undefined : "Remote hiring region is not stated; confirm South African eligibility",
+      hardConflict: false,
+    };
+  }
+
+  if (opportunity.workMode === "Unspecified") {
+    if (sameCity || sameRegion) {
+      return { score: 0.75, strength: "Vacancy location is within your region", gap: "Work arrangement is not stated", hardConflict: false };
+    }
+    return {
+      score: 0.3,
+      gap: "Work arrangement is not stated; confirm whether this location is workable",
       hardConflict: false,
     };
   }
@@ -228,7 +247,14 @@ function preferredRoleFit(profile: CandidateProfile, opportunity: Opportunity) {
 
 function authorizationFit(profile: CandidateProfile, opportunity: Opportunity) {
   if (!appearsSouthAfrican(opportunity.location)) {
-    return { score: 0.75, strength: undefined as string | undefined, gap: undefined as string | undefined };
+    if (!clearlyForeignLocation(opportunity.location)) {
+      return { score: 0.75, strength: undefined as string | undefined, gap: "Hiring country and work authorization need verification" };
+    }
+    return {
+      score: 0.15,
+      strength: undefined as string | undefined,
+      gap: `Work authorization for ${opportunity.location} is not confirmed`,
+    };
   }
 
   const authorized = profile.workAuthorizedCountries.some((country) =>

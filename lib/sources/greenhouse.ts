@@ -67,19 +67,24 @@ function inferSkills(text: string) {
   return skillCatalog.filter((skill) => includesSkill(text, skill));
 }
 
-function inferExperience(text: string) {
+export function inferExperience(text: string) {
   const matches = [...text.matchAll(/(\d{1,2})\s*\+?\s*(?:years?|yrs?)/gi)]
     .map((match) => Number(match[1]))
     .filter((value) => Number.isFinite(value) && value >= 0 && value <= 20);
 
-  return matches.length ? Math.min(...matches) : 0;
+  // Multiple requirements often specify a junior skill and a higher overall
+  // experience bar. The highest explicit requirement is the safer estimate.
+  return matches.length ? Math.max(...matches) : 0;
 }
 
-function inferWorkMode(location: string, text: string): Opportunity["workMode"] {
-  const combined = `${location} ${text}`.toLowerCase();
-  if (combined.includes("remote")) return "Remote";
-  if (combined.includes("hybrid")) return "Hybrid";
-  return "On-site";
+export function inferWorkMode(location: string, title: string): Opportunity["workMode"] {
+  // Benefits copy can mention remote options without offering a remote role.
+  // Use only structured location and title claims to infer the arrangement.
+  const explicit = `${location} ${title}`.toLowerCase();
+  if (/\bremote\b/.test(explicit)) return "Remote";
+  if (/\bhybrid\b/.test(explicit)) return "Hybrid";
+  if (/\bon[ -]?site\b/.test(explicit)) return "On-site";
+  return "Unspecified";
 }
 
 function inferQualification(text: string) {
@@ -120,7 +125,7 @@ export async function fetchGreenhouseBoard(boardToken: string): Promise<Opportun
       title: job.title,
       company: companyLabel(boardToken),
       location,
-      workMode: inferWorkMode(location, content),
+      workMode: inferWorkMode(location, job.title),
       minYearsExperience: inferExperience(content),
       requiredSkills: skills.slice(0, 6),
       preferredSkills: skills.slice(6, 10),

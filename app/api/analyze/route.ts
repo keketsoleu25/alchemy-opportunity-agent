@@ -8,6 +8,7 @@ import type { CandidateProfile, MatchResult } from "@/lib/types";
 type AnalyzeRequest = {
   profile?: Partial<CandidateProfile>;
   query?: string;
+  useDemo?: boolean;
 };
 
 function cleanStringArray(value: unknown, fallback: string[]): string[] {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
 
   const profile = buildProfile(body.profile);
   const query = typeof body.query === "string" ? body.query.trim() : "";
-  const discovery = await discoverOpportunities(query);
+  const discovery = await discoverOpportunities(query, body.useDemo === true);
 
   const scored = discovery.opportunities
     .map((opportunity, discoveryIndex) => ({

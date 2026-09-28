@@ -1,5 +1,6 @@
 import { demoOpportunities } from "@/lib/data";
 import { fetchGreenhouseBoard } from "@/lib/sources/greenhouse";
+import { isCompatibleWithJuniorIntent } from "@/lib/junior-eligibility";
 import type { Opportunity } from "@/lib/types";
 
 export type DiscoveryResult = {
@@ -65,31 +66,6 @@ const adjacentTechnicalTitleTerms = [
   "integration engineer",
   "professional services",
   "technical consultant",
-];
-
-const seniorTitleTerms = [
-  "senior",
-  "sr ",
-  "sr.",
-  "lead",
-  "team lead",
-  "principal",
-  "staff",
-  "manager",
-  "head of",
-  "director",
-  "architect",
-  "vp ",
-  "vice president",
-];
-
-const midLevelTitleTerms = [
-  "intermediate",
-  "mid-level",
-  "mid level",
-  "midlevel",
-  "level ii",
-  "level 2",
 ];
 
 const juniorPreferredTitleTerms = [
@@ -176,15 +152,6 @@ function classifyRoleFamily(opportunity: Opportunity): RoleFamily {
   return "other";
 }
 
-function isCompatibleWithJuniorIntent(opportunity: Opportunity) {
-  const title = opportunity.title.toLowerCase();
-
-  if (seniorTitleTerms.some((term) => title.includes(term))) return false;
-  if (midLevelTitleTerms.some((term) => title.includes(term))) return false;
-
-  return opportunity.minYearsExperience <= 3;
-}
-
 function rankByQuery(opportunities: Opportunity[], query: string, juniorIntent: boolean) {
   const terms = queryTerms(query);
 
@@ -206,7 +173,14 @@ function rankByQuery(opportunities: Opportunity[], query: string, juniorIntent: 
     .map(({ opportunity }) => opportunity);
 }
 
-export async function discoverOpportunities(query: string): Promise<DiscoveryResult> {
+export async function discoverOpportunities(query: string, useDemo = false): Promise<DiscoveryResult> {
+  if (useDemo) {
+    return {
+      opportunities: demoOpportunities,
+      sourceMode: "demo-fallback",
+      note: "Guided example: these opportunities are fictional and are for demonstrating the decision workflow.",
+    };
+  }
   const tokens = tokensFromEnv();
 
   if (!tokens.length) {
